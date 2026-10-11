@@ -12,7 +12,7 @@ import pygame
 from physics import CodeError, Settings, Target, flight_to, motion_data, position, read_code
 
 
-WIDTH, HEIGHT = 1200, 760
+WIDTH, HEIGHT = 900, 700
 SAVE_FILE = Path(__file__).with_name(".motion_lab_progress.json")
 
 INK = (27, 48, 68)
@@ -21,7 +21,11 @@ TEAL = (28, 150, 124)
 CREAM = (248, 247, 239)
 PEACH = (244, 139, 100)
 WHITE = (255, 255, 255)
-DATA_BUTTON = pygame.Rect(613, 661, 143, 35)
+DATA_BUTTON = pygame.Rect(402, 617, 126, 34)
+RUN_BUTTON = pygame.Rect(570, 514, 176, 42)
+RESET_BUTTON = pygame.Rect(754, 514, 108, 42)
+EDITOR_RECT = pygame.Rect(570, 352, 292, 150)
+SCENE_RECT = pygame.Rect(38, 315, 492, 285)
 
 MISSIONS = [
     dict(name="Earth launch", icon="01", title="Reach the landing pad",
@@ -88,12 +92,12 @@ class Game:
         self.window = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
         self.canvas = pygame.Surface((WIDTH, HEIGHT))
         self.clock = pygame.time.Clock()
-        self.font = pygame.font.SysFont("dejavusans", 16)
-        self.small = pygame.font.SysFont("dejavusans", 13)
-        self.tiny = pygame.font.SysFont("dejavusans", 11, bold=True)
-        self.medium = pygame.font.SysFont("dejavusans", 21, bold=True)
-        self.heading = pygame.font.SysFont("dejavusans", 38, bold=True)
-        self.code_font = pygame.font.SysFont("dejavusansmono", 19)
+        self.font = pygame.font.SysFont("dejavusans", 15)
+        self.small = pygame.font.SysFont("dejavusans", 12)
+        self.tiny = pygame.font.SysFont("dejavusans", 10, bold=True)
+        self.medium = pygame.font.SysFont("dejavusans", 19, bold=True)
+        self.heading = pygame.font.SysFont("dejavusans", 33, bold=True)
+        self.code_font = pygame.font.SysFont("dejavusansmono", 17)
         self.completed = load_progress()
         self.index = 0
         self.drafts = [m["starter"] for m in MISSIONS]
@@ -108,7 +112,7 @@ class Game:
         self.animation = False
         self.show_path = False
         self.show_telemetry = False
-        self.stars = [(random.randrange(75, 735), random.randrange(370, 590), random.choice((1, 1, 2))) for _ in range(45)]
+        self.stars = [(random.randrange(50, 520), random.randrange(328, 550), random.choice((1, 1, 2))) for _ in range(35)]
         pygame.key.start_text_input()
 
     @property
@@ -157,7 +161,7 @@ class Game:
         self.centered(label, rect.centerx, rect.y + (rect.height - self.font.get_height()) // 2, color)
 
     def map_point(self, x: float, y: float) -> tuple[int, int]:
-        return int(94 + x / self.mission["xmax"] * 622), int(614 - y / self.mission["ymax"] * 230)
+        return int(65 + x / self.mission["xmax"] * 430), int(563 - y / self.mission["ymax"] * 214)
 
     def draw_rocket(self, x: int, y: int, angle: float = -35) -> None:
         rocket = pygame.Surface((64, 64), pygame.SRCALPHA)
@@ -174,9 +178,9 @@ class Game:
     def draw_telemetry(self) -> None:
         if not self.show_telemetry:
             return
-        self.box(pygame.Rect(524, 360, 220, 128), (18, 43, 61), 13, (105, 165, 161))
+        self.box(pygame.Rect(350, 326, 170, 118), (18, 43, 61), 13, (105, 165, 161))
         heading = "LIVE PHYSICS" if self.animation else "LAST FLIGHT" if self.flight else "AT LAUNCH"
-        self.text(heading, 538, 370, (142, 222, 190), self.tiny)
+        self.text(heading, 361, 336, (142, 222, 190), self.tiny)
         settings = self.settings if self.flight else None
         if settings is None:
             try:
@@ -193,29 +197,28 @@ class Game:
             speed, height, gravity = motion_data(settings, time)
             values = (f"{speed:.1f} m/s", f"{height:.1f} m", f"{gravity:.1f} m/s²")
         for row, (label, value) in enumerate(zip(("SPEED", "HEIGHT", "GRAVITY"), values)):
-            y = 394 + row * 29
-            self.text(label, 538, y, (172, 202, 204), self.tiny)
+            y = 359 + row * 26
+            self.text(label, 361, y, (172, 202, 204), self.tiny)
             image = self.small.render(value, True, WHITE)
-            self.canvas.blit(image, (731 - image.get_width(), y - 1))
+            self.canvas.blit(image, (509 - image.get_width(), y - 1))
 
     def draw_scene(self) -> None:
-        scene = pygame.Rect(57, 349, 699, 302)
-        self.box(scene, (21, 48, 74), 17)
-        self.canvas.set_clip(scene)
+        self.box(SCENE_RECT, (21, 48, 74), 17)
+        self.canvas.set_clip(SCENE_RECT)
         for x, y, r in self.stars:
             pygame.draw.circle(self.canvas, (183, 226, 223), (x, y), r)
-        pygame.draw.circle(self.canvas, (252, 224, 163), (669, 416), 31)
-        pygame.draw.circle(self.canvas, (252, 224, 163, 35), (669, 416), 43, 2)
-        pygame.draw.ellipse(self.canvas, (41, 93, 105), (-85, 586, 510, 115))
-        pygame.draw.ellipse(self.canvas, (48, 106, 111), (245, 587, 640, 115))
-        pygame.draw.ellipse(self.canvas, (68, 143, 130), (-70, 625, 930, 91))
+        pygame.draw.circle(self.canvas, (252, 224, 163), (469, 381), 26)
+        pygame.draw.circle(self.canvas, (252, 224, 163), (469, 381), 36, 2)
+        pygame.draw.ellipse(self.canvas, (41, 93, 105), (-55, 538, 370, 95))
+        pygame.draw.ellipse(self.canvas, (48, 106, 111), (184, 542, 455, 92))
+        pygame.draw.ellipse(self.canvas, (68, 143, 130), (-50, 577, 640, 72))
         target = self.mission["target"]
         tx, ty = self.map_point(target.x, target.y)
-        pygame.draw.circle(self.canvas, (124, 197, 172), (94, 614), 21)
+        pygame.draw.circle(self.canvas, (124, 197, 172), (65, 563), 21)
         pygame.draw.circle(self.canvas, (251, 211, 126), (tx, ty), 24, 2)
         pygame.draw.circle(self.canvas, (255, 228, 161), (tx, ty), 14)
         pygame.draw.circle(self.canvas, (229, 148, 99), (tx, ty), 5)
-        self.centered("TARGET", tx, max(356, ty - 43), (255, 239, 192), self.tiny)
+        self.centered("TARGET", tx, max(321, ty - 40), (255, 239, 192), self.tiny)
         if self.show_path and self.settings and self.flight:
             points = [self.map_point(*position(self.settings, self.flight.duration * i / 100)) for i in range(101)]
             for i in range(0, 100, 2):
@@ -231,93 +234,93 @@ class Game:
             stop = self.flight.closest_time if self.flight.hit else self.flight.duration
             self.draw_rocket(*self.map_point(*position(self.settings, stop)))
         else:
-            self.draw_rocket(94, 614)
+            self.draw_rocket(65, 563)
         self.draw_telemetry()
         self.canvas.set_clip(None)
-        self.box(pygame.Rect(69, 571, 76, 27), (239, 250, 235), 13)
-        self.centered("LAUNCH", 107, 577, (49, 104, 101), self.tiny)
+        self.box(pygame.Rect(47, 505, 70, 24), (239, 250, 235), 12)
+        self.centered("LAUNCH", 82, 511, (49, 104, 101), self.tiny)
 
     def draw_editor(self) -> None:
-        self.box(pygame.Rect(806, 405, 344, 159), (22, 43, 64), 12)
-        self.box(pygame.Rect(806, 405, 344, 32), (34, 61, 78), 12)
-        pygame.draw.rect(self.canvas, (34, 61, 78), (806, 423, 344, 14))
+        self.box(EDITOR_RECT, (22, 43, 64), 12)
+        self.box(pygame.Rect(570, 352, 292, 29), (34, 61, 78), 12)
+        pygame.draw.rect(self.canvas, (34, 61, 78), (570, 369, 292, 12))
         for i, color in enumerate(((246, 156, 114), (244, 207, 129), (117, 207, 165))):
-            pygame.draw.circle(self.canvas, color, (823 + i * 14, 421), 4)
-        self.text("rocket.py", 1060, 411, (192, 210, 209), self.small)
-        line_height = 28
+            pygame.draw.circle(self.canvas, color, (586 + i * 13, 367), 4)
+        self.text("rocket.py", 783, 359, (192, 210, 209), self.small)
+        line_height = 26
         for i, line in enumerate(self.code.split("\n")[:4]):
             color = (119, 174, 173) if line.lstrip().startswith("#") else (216, 244, 226)
-            self.text(line[:30], 825, 443 + i * line_height, color, self.code_font)
+            self.text(line[:27], 586, 386 + i * line_height, color, self.code_font)
         if self.editor_focus and pygame.time.get_ticks() % 1000 < 550:
             before = self.code[:self.cursor]
             row = min(before.count("\n"), 3)
-            fragment = before.split("\n")[-1][:30]
-            cx = 825 + self.code_font.size(fragment)[0]
-            cy = 443 + row * line_height
-            pygame.draw.line(self.canvas, (255, 222, 135), (cx, cy + 2), (cx, cy + 22), 2)
+            fragment = before.split("\n")[-1][:27]
+            cx = 586 + self.code_font.size(fragment)[0]
+            cy = 386 + row * line_height
+            pygame.draw.line(self.canvas, (255, 222, 135), (cx, cy + 1), (cx, cy + 20), 2)
         if self.select_all and self.editor_focus:
-            self.box(pygame.Rect(1049, 541, 89, 18), (247, 203, 121), 7)
-            self.centered("selected", 1093, 543, INK, self.tiny)
+            self.box(pygame.Rect(772, 478, 77, 18), (247, 203, 121), 7)
+            self.centered("selected", 810, 481, INK, self.tiny)
 
     def draw(self) -> None:
         self.canvas.fill(CREAM)
-        pygame.draw.circle(self.canvas, (232, 243, 234), (-42, 90), 166)
-        pygame.draw.line(self.canvas, (220, 229, 220), (0, 81), (WIDTH, 81))
-        self.box(pygame.Rect(38, 25, 36, 36), TEAL, 11)
-        self.centered("✦", 56, 28, WHITE, self.medium)
-        self.text("Mika'S", 86, 28, INK, self.medium)
-        self.text("MOTION LAB", 171, 28, TEAL, self.medium)
-        self.text("PYTHON + PHYSICS", 1002, 32, MUTED, self.tiny)
+        pygame.draw.circle(self.canvas, (232, 243, 234), (-36, 72), 130)
+        pygame.draw.line(self.canvas, (220, 229, 220), (0, 65), (WIDTH, 65))
+        self.box(pygame.Rect(24, 16, 32, 32), TEAL, 10)
+        self.centered("✦", 40, 18, WHITE, self.medium)
+        self.text("MIKA'S", 67, 20, INK, self.medium)
+        self.text("MOTION LAB", 147, 20, TEAL, self.medium)
+        self.text("PYTHON + PHYSICS", 768, 25, MUTED, self.tiny)
 
-        self.text("MAKE IDEAS FLY.", 38, 112, INK, self.heading)
-        self.text("Change Python numbers. Launch a rocket. Discover why it flies.", 40, 159, MUTED)
-        self.box(pygame.Rect(962, 107, 199, 73), WHITE, 14, (222, 233, 222))
-        self.text("MISSIONS COMPLETE", 979, 120, MUTED, self.tiny)
-        self.text(f"{len(self.completed)} / {len(MISSIONS)}", 980, 137, TEAL, self.medium)
-        self.box(pygame.Rect(1041, 151, 101, 8), (230, 239, 231), 4)
+        self.text("MAKE IDEAS FLY.", 24, 83, INK, self.heading)
+        self.text("Change Python numbers. Launch a rocket. Discover why it flies.", 26, 128, MUTED, self.small)
+        self.box(pygame.Rect(718, 81, 158, 70), WHITE, 13, (222, 233, 222))
+        self.text("MISSIONS COMPLETE", 730, 92, MUTED, self.tiny)
+        self.text(f"{len(self.completed)} / {len(MISSIONS)}", 730, 111, TEAL, self.medium)
+        self.box(pygame.Rect(789, 134, 75, 7), (230, 239, 231), 4)
         if self.completed:
-            self.box(pygame.Rect(1041, 151, 101 * len(self.completed) // len(MISSIONS), 8), TEAL, 4)
+            self.box(pygame.Rect(789, 134, 75 * len(self.completed) // len(MISSIONS), 7), TEAL, 4)
 
         for i, mission in enumerate(MISSIONS):
-            rect = pygame.Rect(38 + i * 226, 205, 215, 43)
+            rect = pygame.Rect(24 + i * 170, 166, 166, 39)
             active = i == self.index
-            self.box(rect, TEAL if active else WHITE, 11, None if active else (221, 231, 223))
+            self.box(rect, TEAL if active else WHITE, 10, None if active else (221, 231, 223))
             label = f"{mission['icon']}   {mission['name']}{'  ★' if i in self.completed else ''}"
-            self.centered(label, rect.centerx, 216, WHITE if active else MUTED, self.small)
+            self.centered(label, rect.centerx, 177, WHITE if active else MUTED, self.small)
 
-        self.box(pygame.Rect(38, 265, 738, 455), WHITE, 20, (226, 233, 226))
-        self.box(pygame.Rect(788, 265, 374, 455), WHITE, 20, (226, 233, 226))
-        self.text(f"MISSION {self.mission['icon']}", 58, 283, TEAL, self.tiny)
-        self.text(self.mission["title"], 58, 299, INK, self.medium)
-        self.text(self.mission["description"], 58, 328, MUTED, self.small)
-        badge_width = max(98, self.tiny.size(self.mission["world"])[0] + 24)
-        badge_x = 752 - badge_width
-        self.box(pygame.Rect(badge_x, 282, badge_width, 27), (238, 246, 236), 13)
-        self.centered(self.mission["world"], badge_x + badge_width // 2, 290, (58, 123, 112), self.tiny)
+        self.box(pygame.Rect(24, 225, 520, 439), WHITE, 18, (226, 233, 226))
+        self.box(pygame.Rect(556, 225, 320, 439), WHITE, 18, (226, 233, 226))
+        self.text(f"MISSION {self.mission['icon']}", 40, 239, TEAL, self.tiny)
+        self.text(self.mission["title"], 40, 255, INK, self.medium)
+        self.text(self.mission["description"], 40, 286, MUTED, self.small)
+        badge_width = max(82, self.tiny.size(self.mission["world"])[0] + 20)
+        badge_x = 528 - badge_width
+        self.box(pygame.Rect(badge_x, 239, badge_width, 24), (238, 246, 236), 12)
+        self.centered(self.mission["world"], badge_x + badge_width // 2, 245, (58, 123, 112), self.tiny)
         self.draw_scene()
         target = self.mission["target"]
-        self.text(f"TARGET  {target.x:g} m across  ·  {target.y:g} m up", 58, 672, (73, 113, 116), self.small)
+        self.text(f"TARGET  {target.x:g} m across · {target.y:g} m up", 40, 625, (73, 113, 116), self.small)
         flight_label = f"FLIGHT  {self.flight.range:.1f} m" if self.flight else "FLIGHT  —"
-        self.text(flight_label, 349, 672, (73, 113, 116), self.small)
+        self.text(flight_label, 279, 625, (73, 113, 116), self.small)
         self.button(DATA_BUTTON, "HIDE DATA" if self.show_telemetry else "SHOW DATA",
                     TEAL if self.show_telemetry else (231, 243, 236),
                     WHITE if self.show_telemetry else (42, 112, 99))
 
-        self.box(pygame.Rect(806, 286, 39, 39), (229, 245, 237), 11)
-        self.centered("</>", 825, 296, TEAL, self.small)
-        self.text("YOUR CODE", 855, 287, TEAL, self.tiny)
-        self.text("Rocket controls", 855, 300, INK, self.medium)
-        self.wrapped(self.mission["instruction"], 806, 342, 340, MUTED, self.small)
-        self.text("Click the code to edit it. Ctrl+Enter launches.", 806, 383, (131, 148, 151), self.tiny)
+        self.box(pygame.Rect(570, 241, 35, 35), (229, 245, 237), 10)
+        self.centered("</>", 587, 250, TEAL, self.small)
+        self.text("YOUR CODE", 614, 241, TEAL, self.tiny)
+        self.text("Rocket controls", 614, 253, INK, self.medium)
+        self.wrapped(self.mission["instruction"], 570, 290, 290, MUTED, self.small, 17)
+        self.text("Click code to edit · Ctrl+Enter launches", 570, 332, (131, 148, 151), self.tiny)
         self.draw_editor()
-        self.button(pygame.Rect(806, 579, 211, 44), "▶  RUN & LAUNCH", PEACH)
-        self.button(pygame.Rect(1026, 579, 124, 44), "RESET CODE", (236, 244, 236), (70, 110, 103))
+        self.button(RUN_BUTTON, "▶  RUN & LAUNCH", PEACH)
+        self.button(RESET_BUTTON, "RESET", (236, 244, 236), (70, 110, 103))
         feedback_fill = (232, 247, 235) if self.message_kind == "success" else (255, 239, 230) if self.message_kind == "error" else (242, 248, 242)
-        self.box(pygame.Rect(806, 639, 344, 63), feedback_fill, 11)
-        self.text("★" if self.message_kind == "success" else "!" if self.message_kind == "error" else "?", 819, 648, TEAL if self.message_kind == "success" else PEACH, self.medium)
-        self.text(self.message[:46], 849, 648, (60, 103, 94), self.small)
-        self.wrapped(self.mission["science"], 849, 674, 292, (125, 142, 123), self.tiny, 13)
-        self.text("Experiment first. Then explain what changed.", 39, 738, (139, 154, 146), self.tiny)
+        self.box(pygame.Rect(570, 569, 292, 80), feedback_fill, 11)
+        self.text("★" if self.message_kind == "success" else "!" if self.message_kind == "error" else "?", 582, 578, TEAL if self.message_kind == "success" else PEACH, self.medium)
+        self.wrapped(self.message, 608, 578, 242, (60, 103, 94), self.small, 16)
+        self.wrapped(self.mission["science"], 608, 616, 240, (125, 142, 123), self.tiny, 12)
+        self.text("Experiment first. Then explain what changed.", 24, 680, (139, 154, 146), self.tiny)
 
         window_size = self.window.get_size()
         scale = min(window_size[0] / WIDTH, window_size[1] / HEIGHT)
@@ -415,23 +418,23 @@ class Game:
     def handle_mouse(self, point: tuple[float, float]) -> None:
         x, y = point
         for i in range(len(MISSIONS)):
-            if pygame.Rect(38 + i * 226, 205, 215, 43).collidepoint(x, y):
+            if pygame.Rect(24 + i * 170, 166, 166, 39).collidepoint(x, y):
                 self.select_mission(i)
                 return
         if DATA_BUTTON.collidepoint(x, y):
             self.show_telemetry = not self.show_telemetry
-        elif pygame.Rect(806, 579, 211, 44).collidepoint(x, y):
+        elif RUN_BUTTON.collidepoint(x, y):
             self.launch()
-        elif pygame.Rect(1026, 579, 124, 44).collidepoint(x, y):
+        elif RESET_BUTTON.collidepoint(x, y):
             self.code = self.mission["starter"]
             self.cursor = len(self.code)
             self.message, self.message_kind = "Code reset. Try a new number!", "tip"
-        elif pygame.Rect(806, 437, 344, 127).collidepoint(x, y):
+        elif pygame.Rect(570, 381, 292, 121).collidepoint(x, y):
             self.editor_focus = True
             self.select_all = False
-            row = min(max(int((y - 443) // 28), 0), len(self.code.split("\n")) - 1)
+            row = min(max(int((y - 386) // 26), 0), len(self.code.split("\n")) - 1)
             lines = self.code.split("\n")
-            col = min(len(lines[row]), max(0, round((x - 825) / max(1, self.code_font.size("0")[0]))))
+            col = min(len(lines[row]), max(0, round((x - 586) / max(1, self.code_font.size("0")[0]))))
             self.cursor = sum(len(line) + 1 for line in lines[:row]) + col
         else:
             self.editor_focus = False

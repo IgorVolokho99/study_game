@@ -9,7 +9,8 @@ from pathlib import Path
 
 import pygame
 
-from physics import CodeError, Settings, Target, flight_to, motion_data, position, read_code
+from audio import Sounds
+from physics import CodeError, Obstacle, Settings, Target, flight_to, motion_data, position, read_code
 
 
 WIDTH, HEIGHT = 900, 700
@@ -26,38 +27,90 @@ RUN_BUTTON = pygame.Rect(570, 514, 176, 42)
 RESET_BUTTON = pygame.Rect(754, 514, 108, 42)
 EDITOR_RECT = pygame.Rect(570, 352, 292, 150)
 SCENE_RECT = pygame.Rect(38, 315, 492, 285)
+PREV_PAGE_BUTTON = pygame.Rect(24, 166, 34, 39)
+NEXT_PAGE_BUTTON = pygame.Rect(842, 166, 34, 39)
+SOUND_BUTTON = pygame.Rect(642, 16, 112, 32)
+MISSIONS_PER_PAGE = 5
+PROGRESS_VERSION = 2
 
 MISSIONS = [
-    dict(name="Earth launch", icon="01", title="Reach the landing pad",
-         description="The pad is 16 meters away. Can you land on it?",
-         instruction="Change speed. More speed means more distance sideways.",
-         science="Speed goes sideways. Gravity pulls down.",
-         target=Target(16, 0, 1.15), xmax=25, ymax=14,
-         starter="# Change a number!\nspeed = 6\nup = 10\ngravity = 10", world="EARTH"),
-    dict(name="Moon bounce", icon="02", title="Catch the moon star",
-         description="The star is 40 meters across and 25 meters up.",
-         instruction="Change gravity. The Moon pulls much less strongly.",
-         science="Less gravity means more time in the air.",
-         target=Target(40, 25, 2.2), xmax=85, ymax=32,
-         starter="# Try smaller gravity!\nspeed = 8\nup = 10\ngravity = 10", world="MOON"),
-    dict(name="Planet puzzle", icon="03", title="Find the floating crystal",
-         description="The crystal is 36 meters across and 9 meters up.",
-         instruction="Try speed and up. Change one number at a time.",
-         science="Up starts a climb; gravity slows it.",
-         target=Target(36, 9, 1.8), xmax=55, ymax=27,
-         starter="# Tune your rocket!\nspeed = 8\nup = 12\ngravity = 6", world="NEW PLANET"),
-    dict(name="Sky bridge", icon="04", title="Fly over the canyon",
-         description="A bridge floats 24 meters across and 15 meters up.",
-         instruction="Change up. A stronger push makes a higher arc.",
-         science="More up makes the rocket climb higher.",
-         target=Target(24, 15, 1.5), xmax=42, ymax=26,
-         starter="# Reach the high bridge!\nspeed = 8\nup = 10\ngravity = 10", world="SKY BRIDGE"),
-    dict(name="Heavy planet", icon="05", title="Beat the strong gravity",
-         description="A beacon is 30 meters across and 6 meters up.",
-         instruction="Gravity is strong here. Tune speed and up together.",
-         science="A stronger pull needs a bigger upward push.",
-         target=Target(30, 6, 1.6), xmax=48, ymax=23,
-         starter="# Strong gravity!\nspeed = 8\nup = 12\ngravity = 12", world="HEAVY PLANET"),
+    dict(name="Wall jump", icon="01", title="Clear the stone wall",
+         description="Fly over the wall, then land 24 meters away.",
+         instruction="The wall blocks low flights. Give the rocket more up.",
+         science="More up makes a taller arc over the wall.",
+         target=Target(24, 0, 1.2), xmax=37, ymax=17,
+         obstacles=(Obstacle(10, 12, 0, 6, "wall"),),
+         starter="# Clear the wall!\nspeed = 8\nup = 10\ngravity = 10", world="WALL"),
+    dict(name="Underpass", icon="02", title="Fly under the gate",
+         description="The gate hangs above the path to a 24-meter pad.",
+         instruction="A high arc hits the gate. Try a faster, lower flight.",
+         science="Speed changes where the rocket is along its arc.",
+         target=Target(24, 0, 1.2), xmax=37, ymax=17,
+         obstacles=(Obstacle(9, 15, 7.5, 13.5, "gate"),),
+         starter="# Stay below the gate!\nspeed = 8\nup = 15\ngravity = 10", world="LOW GATE"),
+    dict(name="Two gates", icon="03", title="Thread the safe path",
+         description="Go over the wall and under the floating gate.",
+         instruction="Both obstacles matter. Try changing speed and up.",
+         science="The same landing spot can have different arcs.",
+         target=Target(30, 0, 1.2), xmax=43, ymax=18,
+         obstacles=(Obstacle(8, 10, 0, 3.5, "wall"),
+                    Obstacle(17, 21, 11, 17, "gate")),
+         starter="# Find the gap!\nspeed = 10\nup = 15\ngravity = 10", world="TWO GATES"),
+    dict(name="Window shot", icon="04", title="Fly through the window",
+         description="Pass between the low wall and the upper gate.",
+         instruction="Too low or too high will hit. Shape a middle arc.",
+         science="Different speed and up can land at the same spot.",
+         target=Target(28, 0, 1.2), xmax=40, ymax=21,
+         obstacles=(Obstacle(12, 14, 0, 4, "wall"),
+                    Obstacle(12, 14, 13, 19, "gate")),
+         starter="# Find the window!\nspeed = 20\nup = 7\ngravity = 10", world="WINDOW"),
+    dict(name="Cloud tunnel", icon="05", title="Stay below both clouds",
+         description="Two floating gates guard the 32-meter pad.",
+         instruction="Your first arc is too high. Make it lower and faster.",
+         science="A faster sideways speed can flatten the arc.",
+         target=Target(32, 0, 1.2), xmax=45, ymax=20,
+         obstacles=(Obstacle(8, 13, 8, 16, "gate"),
+                    Obstacle(19, 24, 8, 16, "gate")),
+         starter="# Under both clouds!\nspeed = 8\nup = 16\ngravity = 8", world="CLOUDS"),
+    dict(name="Moon wall", icon="06", title="Leap in weak gravity",
+         description="Clear the wall and reach the far moon pad.",
+         instruction="Gravity is weak. Give the rocket enough up to clear it.",
+         science="Weak gravity keeps the rocket airborne longer.",
+         target=Target(60, 0, 1.8), xmax=85, ymax=15,
+         obstacles=(Obstacle(25, 29, 0, 5, "wall"),),
+         starter="# Moon leap!\nspeed = 10\nup = 4\ngravity = 2", world="MOON WALL"),
+    dict(name="Crystal gate", icon="07", title="Catch the floating crystal",
+         description="Reach a high crystal without touching the gate.",
+         instruction="The gate catches tall arcs. Change up a little.",
+         science="Up controls height at each point of the flight.",
+         target=Target(30, 12, 1.5), xmax=43, ymax=27,
+         obstacles=(Obstacle(14, 18, 17.5, 23, "gate"),),
+         starter="# Catch the crystal!\nspeed = 10\nup = 16\ngravity = 6", world="CRYSTAL"),
+    dict(name="Twin towers", icon="08", title="Clear two tall walls",
+         description="The second wall is taller than the first.",
+         instruction="Keep the same speed, but raise the arc enough.",
+         science="The rocket loses height after the top of its arc.",
+         target=Target(36, 0, 1.3), xmax=49, ymax=17,
+         obstacles=(Obstacle(10, 12, 0, 3.5, "wall"),
+                    Obstacle(23, 25, 0, 5, "wall")),
+         starter="# Two towers!\nspeed = 12\nup = 10\ngravity = 8", world="TOWERS"),
+    dict(name="Over the gate", icon="09", title="Climb above the gate",
+         description="This time the safe path goes over the gate.",
+         instruction="Try less speed and more up for a taller arc.",
+         science="A high arc can reach the same landing pad.",
+         target=Target(28, 0, 1.2), xmax=40, ymax=25,
+         obstacles=(Obstacle(12, 18, 7, 13, "gate"),),
+         gate_hint="The gate stopped the rocket. Fly higher!",
+         starter="# Go over this time!\nspeed = 10\nup = 14\ngravity = 10", world="HIGH GATE"),
+    dict(name="Final course", icon="10", title="Complete the star course",
+         description="Clear two walls, pass a gate, and catch the star.",
+         instruction="Plan the whole arc: over walls, under the gate.",
+         science="One change can affect every obstacle on the path.",
+         target=Target(40, 12, 1.6), xmax=57, ymax=32,
+         obstacles=(Obstacle(8, 10, 0, 5, "wall"),
+                    Obstacle(19, 23, 23.5, 29.5, "gate"),
+                    Obstacle(31, 33, 0, 10, "wall")),
+         starter="# Final course!\nspeed = 10\nup = 18\ngravity = 6", world="FINAL COURSE"),
 ]
 
 ERRORS = {
@@ -73,23 +126,33 @@ ERRORS = {
 def load_progress() -> set[int]:
     try:
         data = json.loads(SAVE_FILE.read_text(encoding="utf-8"))
-        return {n for n in data if isinstance(n, int) and 0 <= n < len(MISSIONS)}
+        if isinstance(data, list):
+            # Old saves used indices 0-7; only old missions 6-8 remain.
+            return {n - 5 for n in data if type(n) is int and 5 <= n <= 7}
+        if isinstance(data, dict) and data.get("version") == PROGRESS_VERSION:
+            completed = data.get("completed", [])
+            if isinstance(completed, list):
+                return {n for n in completed if type(n) is int and 0 <= n < len(MISSIONS)}
     except (OSError, ValueError, TypeError):
-        return set()
+        pass
+    return set()
 
 
 def save_progress(completed: set[int]) -> None:
     try:
-        SAVE_FILE.write_text(json.dumps(sorted(completed)), encoding="utf-8")
+        SAVE_FILE.write_text(json.dumps({"version": PROGRESS_VERSION,
+                                         "completed": sorted(completed)}), encoding="utf-8")
     except OSError:
         pass  # The game still works in a read-only folder.
 
 
 class Game:
     def __init__(self) -> None:
-        pygame.init()
+        pygame.display.init()
+        pygame.font.init()
         pygame.display.set_caption("Mika's Motion Lab · Python + Physics")
         self.window = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+        self.sounds = Sounds()
         self.canvas = pygame.Surface((WIDTH, HEIGHT))
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont("dejavusans", 15)
@@ -100,6 +163,7 @@ class Game:
         self.code_font = pygame.font.SysFont("dejavusansmono", 17)
         self.completed = load_progress()
         self.index = 0
+        self.page_start = 0
         self.drafts = [m["starter"] for m in MISSIONS]
         self.cursor = len(self.drafts[0])
         self.editor_focus = False
@@ -192,8 +256,7 @@ class Game:
         else:
             time = 0.0
             if self.flight:
-                stop = self.flight.closest_time if self.flight.hit else self.flight.duration
-                time = stop * self.flight_progress
+                time = self.flight.stop_time * self.flight_progress
             speed, height, gravity = motion_data(settings, time)
             values = (f"{speed:.1f} m/s", f"{height:.1f} m", f"{gravity:.1f} m/s²")
         for row, (label, value) in enumerate(zip(("SPEED", "HEIGHT", "GRAVITY"), values)):
@@ -201,6 +264,24 @@ class Game:
             self.text(label, 361, y, (172, 202, 204), self.tiny)
             image = self.small.render(value, True, WHITE)
             self.canvas.blit(image, (509 - image.get_width(), y - 1))
+
+    def draw_obstacles(self) -> None:
+        for obstacle in self.mission.get("obstacles", ()):
+            left, top = self.map_point(obstacle.x_left, obstacle.y_top)
+            right, bottom = self.map_point(obstacle.x_right, obstacle.y_bottom)
+            rect = pygame.Rect(left, top, right - left, bottom - top)
+            if obstacle.kind == "wall":
+                self.box(rect, (124, 93, 101), 4, (245, 166, 127), 2)
+                for line_y in range(top + 15, bottom, 18):
+                    pygame.draw.line(self.canvas, (174, 127, 123), (left + 3, line_y), (right - 3, line_y), 2)
+                label = "WALL"
+            else:
+                self.box(rect, (69, 95, 128), 5, (152, 216, 231), 2)
+                for dot_x in range(left + 10, right - 4, 18):
+                    pygame.draw.circle(self.canvas, (185, 228, 233), (dot_x, top + 9), 2)
+                label = "GATE"
+            self.centered(label, rect.centerx, max(SCENE_RECT.y + 5, top - 17),
+                          (255, 221, 177) if obstacle.kind == "wall" else (193, 238, 241), self.tiny)
 
     def draw_scene(self) -> None:
         self.box(SCENE_RECT, (21, 48, 74), 17)
@@ -212,6 +293,7 @@ class Game:
         pygame.draw.ellipse(self.canvas, (41, 93, 105), (-55, 538, 370, 95))
         pygame.draw.ellipse(self.canvas, (48, 106, 111), (184, 542, 455, 92))
         pygame.draw.ellipse(self.canvas, (68, 143, 130), (-50, 577, 640, 72))
+        self.draw_obstacles()
         target = self.mission["target"]
         tx, ty = self.map_point(target.x, target.y)
         pygame.draw.circle(self.canvas, (124, 197, 172), (65, 563), 21)
@@ -220,19 +302,22 @@ class Game:
         pygame.draw.circle(self.canvas, (229, 148, 99), (tx, ty), 5)
         self.centered("TARGET", tx, max(321, ty - 40), (255, 239, 192), self.tiny)
         if self.show_path and self.settings and self.flight:
-            points = [self.map_point(*position(self.settings, self.flight.duration * i / 100)) for i in range(101)]
+            points = [self.map_point(*position(self.settings, self.flight.stop_time * i / 100)) for i in range(101)]
             for i in range(0, 100, 2):
                 pygame.draw.line(self.canvas, (177, 236, 217), points[i], points[i + 1], 2)
         if self.animation and self.settings and self.flight:
-            stop = self.flight.closest_time if self.flight.hit else self.flight.duration
-            t = stop * self.flight_progress
+            t = self.flight.stop_time * self.flight_progress
             x, y = position(self.settings, t)
             slope = self.settings.up - self.settings.gravity * t
             angle = -math.degrees(math.atan2(slope, self.settings.speed))
             self.draw_rocket(*self.map_point(x, y), angle)
         elif self.flight and self.flight_progress >= 1 and self.settings:
-            stop = self.flight.closest_time if self.flight.hit else self.flight.duration
-            self.draw_rocket(*self.map_point(*position(self.settings, stop)))
+            rocket_position = self.map_point(*position(self.settings, self.flight.stop_time))
+            self.draw_rocket(*rocket_position)
+            if self.flight.blocked:
+                pygame.draw.circle(self.canvas, (255, 161, 119), rocket_position, 27, 3)
+                self.centered("BONK!", rocket_position[0], max(SCENE_RECT.y + 6, rocket_position[1] - 46),
+                              (255, 225, 174), self.tiny)
         else:
             self.draw_rocket(65, 563)
         self.draw_telemetry()
@@ -270,6 +355,10 @@ class Game:
         self.centered("✦", 40, 18, WHITE, self.medium)
         self.text("MIKA'S", 67, 20, INK, self.medium)
         self.text("MOTION LAB", 147, 20, TEAL, self.medium)
+        sound_label = ("SOUND ON" if self.sounds.enabled else "SOUND OFF") if self.sounds.available else "NO AUDIO"
+        self.button(SOUND_BUTTON, sound_label,
+                    (228, 244, 235) if self.sounds.available and self.sounds.enabled else (235, 239, 234),
+                    (31, 124, 101) if self.sounds.available and self.sounds.enabled else MUTED)
         self.text("PYTHON + PHYSICS", 768, 25, MUTED, self.tiny)
 
         self.text("MAKE IDEAS FLY.", 24, 83, INK, self.heading)
@@ -281,8 +370,16 @@ class Game:
         if self.completed:
             self.box(pygame.Rect(789, 134, 75 * len(self.completed) // len(MISSIONS), 7), TEAL, 4)
 
-        for i, mission in enumerate(MISSIONS):
-            rect = pygame.Rect(24 + i * 170, 166, 166, 39)
+        self.box(PREV_PAGE_BUTTON, TEAL if self.page_start else (233, 240, 233), 10)
+        self.centered("‹", PREV_PAGE_BUTTON.centerx, 173,
+                      WHITE if self.page_start else (151, 169, 157), self.medium)
+        has_next = self.page_start + MISSIONS_PER_PAGE < len(MISSIONS)
+        self.box(NEXT_PAGE_BUTTON, TEAL if has_next else (233, 240, 233), 10)
+        self.centered("›", NEXT_PAGE_BUTTON.centerx, 173,
+                      WHITE if has_next else (151, 169, 157), self.medium)
+        for slot, i in enumerate(range(self.page_start, min(self.page_start + MISSIONS_PER_PAGE, len(MISSIONS)))):
+            mission = MISSIONS[i]
+            rect = pygame.Rect(64 + slot * 155, 166, 150, 39)
             active = i == self.index
             self.box(rect, TEAL if active else WHITE, 10, None if active else (221, 231, 223))
             label = f"{mission['icon']}   {mission['name']}{'  ★' if i in self.completed else ''}"
@@ -336,7 +433,9 @@ class Game:
         return (event_pos[0] - (w - WIDTH * scale) / 2) / scale, (event_pos[1] - (h - HEIGHT * scale) / 2) / scale
 
     def select_mission(self, index: int) -> None:
+        self.sounds.play("click")
         self.index = index
+        self.page_start = (index // MISSIONS_PER_PAGE) * MISSIONS_PER_PAGE
         self.cursor = len(self.code)
         self.editor_focus = False
         self.select_all = False
@@ -353,8 +452,10 @@ class Game:
             self.settings = read_code(self.code)
         except CodeError as exc:
             self.message, self.message_kind = ERRORS[exc.code], "error"
+            self.sounds.play("miss")
             return
-        self.flight = flight_to(self.settings, self.mission["target"])
+        self.sounds.play("launch")
+        self.flight = flight_to(self.settings, self.mission["target"], self.mission.get("obstacles", ()))
         self.animation = True
         self.show_path = True
         self.flight_progress = 0
@@ -365,11 +466,20 @@ class Game:
         flight = self.flight
         target = self.mission["target"]
         if flight.hit:
+            self.sounds.play("success")
             self.completed.add(self.index)
             save_progress(self.completed)
             self.message = f"All {len(MISSIONS)} done! Make your own experiment!" if len(self.completed) == len(MISSIONS) else "Great hit! What did your change do?"
             self.message_kind = "success"
             return
+        if flight.blocked:
+            self.sounds.play("impact")
+            obstacle = self.mission["obstacles"][flight.obstacle_index]
+            self.message = ("The wall stopped the rocket. Aim higher!" if obstacle.kind == "wall"
+                            else self.mission.get("gate_hint", "The gate stopped the rocket. Fly lower!"))
+            self.message_kind = "error"
+            return
+        self.sounds.play("miss")
         if flight.range < target.x - target.radius:
             self.message = "Too short. Try more speed or more up."
         elif target.y < 2 and flight.range > target.x + target.radius:
@@ -383,6 +493,7 @@ class Game:
         if event.key == pygame.K_RETURN and event.mod & pygame.KMOD_CTRL:
             self.launch()
             return
+        self.sounds.play("key")
         if event.key == pygame.K_a and event.mod & pygame.KMOD_CTRL:
             self.select_all = True
             return
@@ -414,21 +525,33 @@ class Game:
             return
         self.code = self.code[:self.cursor] + text + self.code[self.cursor:]
         self.cursor += len(text)
+        self.sounds.play("key")
 
     def handle_mouse(self, point: tuple[float, float]) -> None:
         x, y = point
-        for i in range(len(MISSIONS)):
-            if pygame.Rect(24 + i * 170, 166, 166, 39).collidepoint(x, y):
+        if SOUND_BUTTON.collidepoint(x, y):
+            self.sounds.toggle()
+            return
+        if PREV_PAGE_BUTTON.collidepoint(x, y) and self.page_start:
+            self.select_mission(self.page_start - MISSIONS_PER_PAGE)
+            return
+        if NEXT_PAGE_BUTTON.collidepoint(x, y) and self.page_start + MISSIONS_PER_PAGE < len(MISSIONS):
+            self.select_mission(self.page_start + MISSIONS_PER_PAGE)
+            return
+        for slot, i in enumerate(range(self.page_start, min(self.page_start + MISSIONS_PER_PAGE, len(MISSIONS)))):
+            if pygame.Rect(64 + slot * 155, 166, 150, 39).collidepoint(x, y):
                 self.select_mission(i)
                 return
         if DATA_BUTTON.collidepoint(x, y):
             self.show_telemetry = not self.show_telemetry
+            self.sounds.play("click")
         elif RUN_BUTTON.collidepoint(x, y):
             self.launch()
         elif RESET_BUTTON.collidepoint(x, y):
             self.code = self.mission["starter"]
             self.cursor = len(self.code)
             self.message, self.message_kind = "Code reset. Try a new number!", "tip"
+            self.sounds.play("click")
         elif pygame.Rect(570, 381, 292, 121).collidepoint(x, y):
             self.editor_focus = True
             self.select_all = False

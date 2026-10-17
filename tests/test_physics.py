@@ -1,6 +1,8 @@
 import unittest
 
-from physics import CodeError, Settings, Target, flight_to, motion_data, position, read_code
+from main import MISSIONS
+from physics import (CodeError, Obstacle, Settings, Target, flight_to,
+                     motion_data, obstacle_hit_time, position, read_code)
 
 
 class PhysicsTests(unittest.TestCase):
@@ -22,17 +24,20 @@ class PhysicsTests(unittest.TestCase):
             with self.assertRaises(CodeError):
                 read_code(code)
 
-    def test_all_missions_have_clear_solutions(self):
-        cases = (
-            (Settings(8, 10, 10), Target(16, 0, 1.15)),
-            (Settings(8, 10, 2), Target(40, 25, 2.2)),
-            (Settings(12, 12, 6), Target(36, 9, 1.8)),
-            (Settings(8, 20, 10), Target(24, 15, 1.5)),
-            (Settings(10, 20, 12), Target(30, 6, 1.6)),
+    def test_ten_missions_are_solvable_and_start_unsolved(self):
+        solutions = (
+            Settings(8, 15, 10), Settings(12, 10, 10), Settings(12, 12.5, 10),
+            Settings(10, 14, 10), Settings(16, 8, 8), Settings(10, 6, 2),
+            Settings(10, 13, 6), Settings(12, 12, 8), Settings(7, 20, 10),
+            Settings(10, 15, 6),
         )
-        for settings, target in cases:
-            with self.subTest(target=target):
-                self.assertTrue(flight_to(settings, target).hit)
+        self.assertEqual(len(MISSIONS), 10)
+        for mission, settings in zip(MISSIONS, solutions):
+            with self.subTest(mission=mission["name"]):
+                starter = read_code(mission["starter"])
+                obstacles = mission["obstacles"]
+                self.assertTrue(flight_to(starter, mission["target"], obstacles).blocked)
+                self.assertTrue(flight_to(settings, mission["target"], obstacles).hit)
 
     def test_gravity_changes_range(self):
         earth = flight_to(Settings(8, 10, 10), Target(16, 0, 1))
@@ -47,6 +52,14 @@ class PhysicsTests(unittest.TestCase):
         self.assertGreater(launch_speed, top_speed)
         self.assertEqual((top_speed, top_height, top_gravity), (8, 5, 10))
         self.assertEqual((launch_height, gravity), (0, 10))
+
+    def test_obstacle_detection_and_event_order(self):
+        settings = Settings(30, 10, 10)
+        thin_wall = Obstacle(10, 10.01, 2, 3)
+        self.assertIsNotNone(obstacle_hit_time(settings, thin_wall, 2))
+        target = Target(8, 5, 1)
+        later_gate = Obstacle(11, 12, 0, 10, "gate")
+        self.assertTrue(flight_to(Settings(8, 10, 10), target, (later_gate,)).hit)
 
 
 if __name__ == "__main__":
